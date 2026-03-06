@@ -100,7 +100,7 @@ export class PixelScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBounds(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
-    this.cameras.main.setBackgroundColor('#0f1826');
+    this.cameras.main.setBackgroundColor('#060a14');
     this.createTilemapWorld();
     this.createAnimations();
     this.createViewportHud();
@@ -220,41 +220,194 @@ export class PixelScene extends Phaser.Scene {
     structuresLayer?.setDepth(10);
     decorLayer?.setDepth(20);
 
+    this.addSkylineBackdrop();
     this.addStreetAtmosphere();
     this.addShopSigns(map.getObjectLayer('ShopSigns') ?? undefined);
   }
 
-  private addStreetAtmosphere() {
-    const lanternGlow = this.add.graphics();
-    lanternGlow.setDepth(15);
+  private addSkylineBackdrop() {
+    const skyline = this.add.graphics();
+    skyline.setDepth(-20);
+    skyline.fillGradientStyle(0x030510, 0x030510, 0x0d1630, 0x15244d, 1);
+    skyline.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
 
-    const glowSpots = [
-      [148, 338],
-      [404, 338],
-      [660, 338],
-      [916, 338],
-      [1172, 338],
-      [1428, 338],
-      [1684, 338],
-      [1940, 338],
-      [148, 690],
-      [404, 690],
-      [660, 690],
-      [916, 690],
-      [1172, 690],
-      [1428, 690],
-      [1684, 690],
-      [1940, 690],
+    const stars = this.add.graphics();
+    stars.setDepth(-19);
+    for (let i = 0; i < 120; i += 1) {
+      stars.fillStyle(0xdce8ff, Phaser.Math.FloatBetween(0.15, 0.65));
+      stars.fillCircle(Phaser.Math.Between(10, ROOM_WIDTH - 10), Phaser.Math.Between(4, 180), Phaser.Math.Between(1, 2));
+    }
+
+    const towers = this.add.graphics();
+    towers.setDepth(-18);
+    const towerData = [
+      { x: 24, y: 82, w: 118, h: 212, color: 0x12203d, windows: 0x44caff },
+      { x: 156, y: 34, w: 96, h: 262, color: 0x17284a, windows: 0xff68d6 },
+      { x: 268, y: 58, w: 134, h: 236, color: 0x132340, windows: 0x77dcff },
+      { x: 430, y: 24, w: 168, h: 278, color: 0x1a2648, windows: 0x9d77ff },
+      { x: 636, y: 72, w: 114, h: 218, color: 0x13203a, windows: 0x39dfff },
+      { x: 770, y: 18, w: 186, h: 290, color: 0x18264b, windows: 0xff6bd9 },
+      { x: 978, y: 62, w: 126, h: 232, color: 0x12203d, windows: 0x7de9ff },
+      { x: 1128, y: 28, w: 172, h: 274, color: 0x16254a, windows: 0x60beff },
+      { x: 1344, y: 86, w: 108, h: 208, color: 0x12203d, windows: 0xffa74e },
+      { x: 1474, y: 42, w: 142, h: 252, color: 0x19294c, windows: 0x46e6ff },
+      { x: 1648, y: 18, w: 186, h: 288, color: 0x16254a, windows: 0xff68d6 },
+      { x: 1864, y: 66, w: 136, h: 228, color: 0x10203c, windows: 0x84efff },
     ];
 
-    glowSpots.forEach(([x, y]) => {
-      lanternGlow.fillStyle(0xffe8a6, 0.08);
-      lanternGlow.fillCircle(x, y, 48);
+    towerData.forEach((tower) => {
+      towers.fillStyle(tower.color, 0.96);
+      towers.fillRoundedRect(tower.x, tower.y, tower.w, tower.h, 10);
+      towers.fillStyle(0x223764, 0.85);
+      towers.fillRoundedRect(tower.x + 4, tower.y + 4, tower.w - 8, 10, 6);
+
+      for (let x = tower.x + 12; x < tower.x + tower.w - 12; x += 16) {
+        for (let y = tower.y + 24; y < tower.y + tower.h - 16; y += 18) {
+          towers.fillStyle(tower.windows, Phaser.Math.FloatBetween(0.1, 0.32));
+          towers.fillRect(x, y, 6, 10);
+        }
+      }
     });
+
+    const ringRoad = this.add.graphics();
+    ringRoad.setDepth(-16);
+    ringRoad.lineStyle(18, 0x55c5ff, 0.2);
+    this.strokeBezier(
+      ringRoad,
+      new Phaser.Curves.CubicBezier(
+        new Phaser.Math.Vector2(120, 308),
+        new Phaser.Math.Vector2(380, 170),
+        new Phaser.Math.Vector2(650, 164),
+        new Phaser.Math.Vector2(934, 236),
+      ),
+    );
+    this.strokeBezier(
+      ringRoad,
+      new Phaser.Curves.CubicBezier(
+        new Phaser.Math.Vector2(934, 236),
+        new Phaser.Math.Vector2(1232, 314),
+        new Phaser.Math.Vector2(1498, 340),
+        new Phaser.Math.Vector2(1930, 220),
+      ),
+    );
+
+    ringRoad.lineStyle(8, 0xff68d6, 0.45);
+    this.strokeBezier(
+      ringRoad,
+      new Phaser.Curves.CubicBezier(
+        new Phaser.Math.Vector2(118, 310),
+        new Phaser.Math.Vector2(380, 178),
+        new Phaser.Math.Vector2(646, 172),
+        new Phaser.Math.Vector2(934, 244),
+      ),
+    );
+    this.strokeBezier(
+      ringRoad,
+      new Phaser.Curves.CubicBezier(
+        new Phaser.Math.Vector2(934, 244),
+        new Phaser.Math.Vector2(1226, 318),
+        new Phaser.Math.Vector2(1502, 346),
+        new Phaser.Math.Vector2(1928, 226),
+      ),
+    );
+
+    const haze = this.add.graphics();
+    haze.setDepth(-12);
+    haze.fillGradientStyle(0x58b7ff, 0x58b7ff, 0x090f18, 0x090f18, 0.12, 0.03, 0.22, 0.02);
+    haze.fillRect(0, 138, ROOM_WIDTH, 320);
+  }
+
+  private addStreetAtmosphere() {
+    const avenueGlow = this.add.graphics();
+    avenueGlow.setDepth(15);
+
+    const glowSpots = [
+      [156, 352, 0x32ddff],
+      [412, 352, 0xff68d6],
+      [668, 352, 0x32ddff],
+      [924, 352, 0xffae4c],
+      [1180, 352, 0x32ddff],
+      [1436, 352, 0xff68d6],
+      [1692, 352, 0x32ddff],
+      [1948, 352, 0xffae4c],
+      [224, 688, 0xff68d6],
+      [548, 688, 0x32ddff],
+      [872, 688, 0xffae4c],
+      [1196, 688, 0x32ddff],
+      [1520, 688, 0xff68d6],
+      [1844, 688, 0x32ddff],
+    ];
+
+    glowSpots.forEach(([x, y, color]) => {
+      avenueGlow.fillStyle(Number(color), 0.11);
+      avenueGlow.fillCircle(Number(x), Number(y), 56);
+    });
+
+    const railTrails = this.add.graphics();
+    railTrails.setDepth(14);
+    railTrails.lineStyle(12, 0x32ddff, 0.18);
+    this.strokeBezier(
+      railTrails,
+      new Phaser.Curves.CubicBezier(
+        new Phaser.Math.Vector2(0, 500),
+        new Phaser.Math.Vector2(260, 452),
+        new Phaser.Math.Vector2(494, 452),
+        new Phaser.Math.Vector2(774, 510),
+      ),
+    );
+    this.strokeBezier(
+      railTrails,
+      new Phaser.Curves.CubicBezier(
+        new Phaser.Math.Vector2(774, 510),
+        new Phaser.Math.Vector2(1114, 582),
+        new Phaser.Math.Vector2(1448, 590),
+        new Phaser.Math.Vector2(2048, 470),
+      ),
+    );
+
+    railTrails.lineStyle(5, 0xff68d6, 0.42);
+    this.strokeBezier(
+      railTrails,
+      new Phaser.Curves.CubicBezier(
+        new Phaser.Math.Vector2(0, 504),
+        new Phaser.Math.Vector2(260, 458),
+        new Phaser.Math.Vector2(494, 458),
+        new Phaser.Math.Vector2(774, 514),
+      ),
+    );
+    this.strokeBezier(
+      railTrails,
+      new Phaser.Curves.CubicBezier(
+        new Phaser.Math.Vector2(774, 514),
+        new Phaser.Math.Vector2(1114, 586),
+        new Phaser.Math.Vector2(1448, 596),
+        new Phaser.Math.Vector2(2048, 476),
+      ),
+    );
+
+    const wetBloom = this.add.graphics();
+    wetBloom.setDepth(13);
+    wetBloom.fillGradientStyle(0x34e3ff, 0x34e3ff, 0x34e3ff, 0x34e3ff, 0.04, 0.01, 0.12, 0.02);
+    wetBloom.fillRect(0, 438, ROOM_WIDTH, 190);
+    wetBloom.fillGradientStyle(0xff68d6, 0xff68d6, 0xff68d6, 0xff68d6, 0.02, 0.005, 0.07, 0.01);
+    wetBloom.fillRect(0, 628, ROOM_WIDTH, 150);
+
+    const rain = this.add.graphics();
+    rain.setDepth(850);
+    for (let i = 0; i < 180; i += 1) {
+      const x = Phaser.Math.Between(-80, ROOM_WIDTH + 40);
+      const y = Phaser.Math.Between(-10, ROOM_HEIGHT - 50);
+      const length = Phaser.Math.Between(10, 26);
+      rain.lineStyle(1, 0xc2e8ff, Phaser.Math.FloatBetween(0.04, 0.14));
+      rain.beginPath();
+      rain.moveTo(x, y);
+      rain.lineTo(x - 10, y + length);
+      rain.strokePath();
+    }
 
     const vignette = this.add.graphics();
     vignette.setDepth(900);
-    vignette.fillGradientStyle(0x0a1018, 0x0a1018, 0x0a1018, 0x0a1018, 0.22, 0.02, 0.26, 0.02);
+    vignette.fillGradientStyle(0x050810, 0x050810, 0x050810, 0x050810, 0.3, 0.04, 0.34, 0.03);
     vignette.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
   }
 
@@ -270,11 +423,24 @@ export class PixelScene extends Phaser.Scene {
       const y = (object.y ?? 0) - 18;
       const color = typeof getObjectProperty(object, 'color') === 'string' ? String(getObjectProperty(object, 'color')) : '#fff3c9';
       const size = typeof getObjectProperty(object, 'size') === 'number' ? Number(getObjectProperty(object, 'size')) : 20;
+      const caption =
+        typeof getObjectProperty(object, 'caption') === 'string'
+          ? String(getObjectProperty(object, 'caption'))
+          : object.type === 'district'
+            ? 'street district'
+            : 'open late';
 
       const glow = this.add.rectangle(x, y + 2, width + 28, 30, Phaser.Display.Color.HexStringToColor(color).color, 0.12);
       glow.setDepth((object.y ?? 0) + 5);
+      this.tweens.add({
+        targets: glow,
+        alpha: 0.32,
+        duration: Phaser.Math.Between(1400, 2200),
+        yoyo: true,
+        repeat: -1,
+      });
 
-      this.add
+      const title = this.add
         .text(x, y, object.name ?? '', {
           fontFamily: 'Consolas, Monaco, monospace',
           fontSize: `${size}px`,
@@ -285,8 +451,14 @@ export class PixelScene extends Phaser.Scene {
         })
         .setOrigin(0.5, 0.5)
         .setDepth((object.y ?? 0) + 8);
+      this.tweens.add({
+        targets: title,
+        alpha: 0.82,
+        duration: Phaser.Math.Between(1500, 2600),
+        yoyo: true,
+        repeat: -1,
+      });
 
-      const caption = object.type === 'district' ? 'street district' : 'open late';
       this.add
         .text(x, y + 28, caption, {
           fontFamily: 'Consolas, Monaco, monospace',
@@ -302,22 +474,26 @@ export class PixelScene extends Phaser.Scene {
 
   private createViewportHud() {
     this.add
-      .text(24, 18, 'PIXEL ROOM // MERCHANT STREET', {
+      .text(24, 18, 'PIXEL ROOM // NEON MIDTOWN', {
         fontFamily: 'Consolas, Monaco, monospace',
         fontSize: '18px',
-        color: '#fff0c8',
+        color: '#f2f6ff',
       })
       .setScrollFactor(0)
       .setDepth(2000);
 
     this.add
-      .text(24, 42, 'Cafe Ember / Vinyl Corner / Book Nook / Arcade Neon / Night Market', {
+      .text(24, 42, 'Byte Cafe / Pulse Club / Sky Mall / Zero-One / Cloud Bar / Data Bazaar', {
         fontFamily: 'Consolas, Monaco, monospace',
         fontSize: '12px',
-        color: '#b8cada',
+        color: '#a7bbd4',
       })
       .setScrollFactor(0)
       .setDepth(2000);
+  }
+
+  private strokeBezier(graphics: Phaser.GameObjects.Graphics, curve: Phaser.Curves.CubicBezier) {
+    graphics.strokePoints(curve.getPoints(36));
   }
 
   private addPlayerSprite(player: PlayerState) {
