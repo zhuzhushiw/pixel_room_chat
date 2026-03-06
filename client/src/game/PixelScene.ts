@@ -14,13 +14,13 @@ type SceneCallbacks = {
   onMove: (payload: { x: number; y: number; direction: Direction; isMoving: boolean }) => void;
 };
 
-const ROOM_WIDTH = 1152;
-const ROOM_HEIGHT = 768;
+const ROOM_WIDTH = 2048;
+const ROOM_HEIGHT = 1024;
 const ROOM_BOUNDS = {
-  minX: 64,
-  maxX: ROOM_WIDTH - 64,
-  minY: 88,
-  maxY: ROOM_HEIGHT - 52,
+  minX: 96,
+  maxX: ROOM_WIDTH - 96,
+  minY: 128,
+  maxY: ROOM_HEIGHT - 88,
 };
 const MOVE_SPEED = 170;
 
@@ -167,6 +167,8 @@ export class PixelScene extends Phaser.Scene {
 
       this.renderPlayer(player);
     });
+
+    this.updateCameraFollow();
   }
 
   showMessage(message: ChatMessage) {
@@ -251,136 +253,211 @@ export class PixelScene extends Phaser.Scene {
 
   private drawRoom() {
     const bg = this.add.graphics();
-    bg.fillStyle(0x0c1118, 1);
+    bg.fillGradientStyle(0x08111e, 0x08111e, 0x14243a, 0x14243a, 1);
     bg.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
 
-    const floor = this.add.graphics();
-    floor.fillStyle(0xced4dd, 1);
-    floor.fillRoundedRect(48, 54, ROOM_WIDTH - 96, ROOM_HEIGHT - 108, 22);
-
-    for (let x = 64; x < ROOM_WIDTH - 64; x += 32) {
-      for (let y = 70; y < ROOM_HEIGHT - 70; y += 32) {
-        floor.lineStyle(1, 0xa7afbb, 0.55);
-        floor.strokeRect(x, y, 32, 32);
-      }
+    const stars = this.add.graphics();
+    for (let i = 0; i < 90; i += 1) {
+      stars.fillStyle(0xe6ecff, Phaser.Math.FloatBetween(0.25, 0.9));
+      stars.fillCircle(Phaser.Math.Between(20, ROOM_WIDTH - 20), Phaser.Math.Between(18, 180), Phaser.Math.Between(1, 2));
     }
 
-    const walls = this.add.graphics();
-    walls.fillStyle(0xf1efe8, 1);
-    walls.lineStyle(4, 0x3e4760, 1);
-    walls.strokeRoundedRect(48, 54, ROOM_WIDTH - 96, ROOM_HEIGHT - 108, 22);
+    const boulevard = this.add.graphics();
+    boulevard.fillStyle(0x7f8997, 1);
+    boulevard.fillRect(0, 264, ROOM_WIDTH, 492);
+    boulevard.fillStyle(0x4a525f, 1);
+    boulevard.fillRect(0, 360, ROOM_WIDTH, 304);
+    boulevard.fillStyle(0x2d333c, 1);
+    boulevard.fillRect(0, 476, ROOM_WIDTH, 72);
 
-    walls.fillRoundedRect(176, 80, 332, 174, 12);
-    walls.strokeRoundedRect(176, 80, 332, 174, 12);
+    for (let x = 48; x < ROOM_WIDTH - 48; x += 160) {
+      boulevard.fillStyle(0xf6f0ce, 1);
+      boulevard.fillRoundedRect(x, 505, 84, 14, 3);
+    }
 
-    walls.fillRoundedRect(176, 286, 332, 220, 12);
-    walls.strokeRoundedRect(176, 286, 332, 220, 12);
+    for (let x = 0; x < ROOM_WIDTH; x += 32) {
+      boulevard.lineStyle(1, 0xa0aab8, 0.45);
+      boulevard.strokeRect(x, 264, 32, 96);
+      boulevard.strokeRect(x, 664, 32, 92);
+    }
 
-    walls.fillRoundedRect(572, 80, 376, 462, 12);
-    walls.strokeRoundedRect(572, 80, 376, 462, 12);
-
-    walls.fillRoundedRect(572, 574, 376, 102, 12);
-    walls.strokeRoundedRect(572, 574, 376, 102, 12);
-
-    const accents = this.add.graphics();
-    accents.fillStyle(0xbfd7ea, 0.9);
-    accents.fillRoundedRect(226, 122, 112, 54, 6);
-    accents.fillStyle(0xced9e6, 0.95);
-    accents.fillRoundedRect(220, 344, 248, 124, 10);
-    accents.fillStyle(0x5c6b83, 0.22);
-    accents.fillRect(176, 250, 332, 6);
-    accents.fillRect(176, 508, 332, 6);
-    accents.fillRect(572, 548, 376, 6);
-
-    const furniture = this.add.graphics();
-
-    const deskBlocks = [
-      [646, 144],
-      [784, 144],
-      [646, 276],
-      [784, 276],
-      [646, 408],
-      [784, 408],
-    ];
-
-    deskBlocks.forEach(([x, y]) => {
-      furniture.fillStyle(0xdbc7a4, 1);
-      furniture.fillRoundedRect(x, y, 98, 40, 6);
-      furniture.fillStyle(0x465067, 1);
-      furniture.fillRect(x + 16, y - 22, 48, 24);
-      furniture.fillStyle(0x8ec5ff, 1);
-      furniture.fillRect(x + 20, y - 18, 40, 16);
-      furniture.fillStyle(0x2d3548, 1);
-      furniture.fillRoundedRect(x + 24, y + 46, 32, 30, 7);
-      furniture.fillStyle(0x616d82, 0.35);
-      furniture.fillRect(x + 10, y + 8, 78, 6);
+    const crosswalks = this.add.graphics();
+    [524, 1530].forEach((x) => {
+      for (let i = 0; i < 8; i += 1) {
+        crosswalks.fillStyle(0xece7da, 0.88);
+        crosswalks.fillRect(x + i * 18, 458, 10, 108);
+      }
     });
 
-    furniture.fillStyle(0x262d3c, 1);
-    furniture.fillRect(734, 80, 4, 462);
+    const plaza = this.add.graphics();
+    plaza.fillStyle(0xd8d6ce, 1);
+    plaza.fillRoundedRect(882, 154, 304, 150, 18);
+    plaza.lineStyle(3, 0x4d5668, 1);
+    plaza.strokeRoundedRect(882, 154, 304, 150, 18);
+    plaza.fillStyle(0x9cd4ff, 0.9);
+    plaza.fillCircle(1034, 228, 38);
+    plaza.fillStyle(0xe7f4ff, 0.8);
+    plaza.fillCircle(1034, 228, 18);
 
-    furniture.fillStyle(0x6e7d94, 1);
-    furniture.fillRoundedRect(232, 112, 24, 112, 6);
-    furniture.fillRoundedRect(402, 112, 24, 112, 6);
-
-    furniture.fillStyle(0x3d4454, 1);
-    furniture.fillRoundedRect(304, 356, 66, 118, 10);
-    furniture.fillStyle(0x3aa0ff, 0.8);
-    furniture.fillCircle(274, 406, 24);
-    furniture.fillStyle(0x202734, 1);
-    furniture.fillRect(232, 386, 54, 54);
-    furniture.fillRoundedRect(388, 392, 30, 72, 8);
-    furniture.fillStyle(0x49586f, 1);
-    furniture.fillCircle(448, 414, 18);
-    furniture.fillCircle(206, 462, 12);
-    furniture.fillCircle(450, 352, 8);
-
-    furniture.fillStyle(0xd4bf95, 1);
-    furniture.fillRoundedRect(204, 582, 284, 62, 10);
-    furniture.fillStyle(0x9b6136, 1);
-    furniture.fillRect(226, 644, 10, 26);
-    furniture.fillRect(448, 644, 10, 26);
-    furniture.fillRect(252, 644, 10, 26);
-    furniture.fillRect(422, 644, 10, 26);
-
-    furniture.fillStyle(0xe5e0d6, 1);
-    furniture.fillRoundedRect(604, 596, 96, 54, 8);
-    furniture.fillRoundedRect(720, 596, 96, 54, 8);
-    furniture.fillRoundedRect(836, 596, 80, 54, 8);
-
-    const plants = this.add.graphics();
-    const plantPositions = [
-      [142, 212],
-      [520, 214],
-      [528, 622],
-      [972, 140],
-      [972, 620],
+    const storefronts = this.add.graphics();
+    const topShops = [
+      { x: 92, w: 298, accent: 0xef476f, label: 'CAFE' },
+      { x: 430, w: 298, accent: 0x06d6a0, label: 'VINYL' },
+      { x: 1260, w: 298, accent: 0x8e7dff, label: 'BOOKS' },
+      { x: 1598, w: 356, accent: 0xff9f1c, label: 'ARCADE' },
     ];
-    plantPositions.forEach(([x, y]) => {
-      plants.fillStyle(0x5f6a7d, 1);
-      plants.fillRoundedRect(x - 10, y, 20, 20, 4);
-      plants.fillStyle(0x4c9660, 1);
-      plants.fillCircle(x - 6, y - 4, 10);
-      plants.fillCircle(x + 6, y - 8, 12);
-      plants.fillCircle(x + 2, y - 18, 10);
+    const bottomShops = [
+      { x: 94, w: 330, accent: 0x3a86ff, label: 'BAKERY' },
+      { x: 464, w: 338, accent: 0xff5d8f, label: 'FLORIST' },
+      { x: 1242, w: 308, accent: 0x00c2a8, label: 'BOUTIQUE' },
+      { x: 1592, w: 330, accent: 0xf4d35e, label: 'RECORDS' },
+    ];
+
+    const drawShop = (x: number, y: number, w: number, h: number, accent: number, label: string) => {
+      storefronts.fillStyle(0xf2efe8, 1);
+      storefronts.fillRoundedRect(x, y, w, h, 16);
+      storefronts.lineStyle(4, 0x3f495c, 1);
+      storefronts.strokeRoundedRect(x, y, w, h, 16);
+      storefronts.fillStyle(accent, 1);
+      storefronts.fillRoundedRect(x + 22, y + 18, w - 44, 38, 12);
+      storefronts.fillStyle(0xb9d6ec, 0.95);
+      storefronts.fillRoundedRect(x + 24, y + 72, w - 48, 88, 10);
+      storefronts.fillStyle(0xf8f6f0, 1);
+      storefronts.fillRoundedRect(x + w / 2 - 30, y + 90, 60, h - 90, 8);
+      storefronts.fillStyle(0x384155, 1);
+      storefronts.fillRect(x + w / 2 - 4, y + 96, 8, h - 100);
+      storefronts.fillStyle(0x6f7e92, 0.25);
+      storefronts.fillRect(x + 40, y + 84, w - 80, 6);
+      this.add
+        .text(x + w / 2, y + 37, label, {
+          fontFamily: 'Consolas, Monaco, monospace',
+          fontSize: '20px',
+          color: '#fff9ea',
+          fontStyle: 'bold',
+        })
+        .setOrigin(0.5)
+        .setDepth(50);
+    };
+
+    topShops.forEach((shop) => drawShop(shop.x, 54, shop.w, 172, shop.accent, shop.label));
+    bottomShops.forEach((shop) => drawShop(shop.x, 794, shop.w, 160, shop.accent, shop.label));
+
+    const decor = this.add.graphics();
+    decor.fillStyle(0xffde8a, 0.18);
+    for (let i = 0; i < 10; i += 1) {
+      const baseX = 140 + i * 190;
+      decor.fillCircle(baseX, 236, 18);
+      decor.fillCircle(baseX + 40, 780, 18);
+    }
+
+    const benches = this.add.graphics();
+    const benchSpots = [
+      [894, 328],
+      [1108, 328],
+      [910, 710],
+      [1102, 710],
+      [320, 708],
+      [1698, 708],
+    ];
+    benchSpots.forEach(([x, y]) => {
+      benches.fillStyle(0x8f5d39, 1);
+      benches.fillRoundedRect(x, y, 74, 14, 4);
+      benches.fillRect(x + 8, y + 14, 6, 18);
+      benches.fillRect(x + 60, y + 14, 6, 18);
+      benches.fillStyle(0x4d5668, 1);
+      benches.fillRect(x - 2, y - 12, 78, 6);
+    });
+
+    const stalls = this.add.graphics();
+    const stallData = [
+      [612, 828, 96, 58, 0xff7f50],
+      [734, 828, 96, 58, 0x6dd3ff],
+      [856, 828, 96, 58, 0xffd166],
+      [978, 828, 96, 58, 0x95d26a],
+      [1100, 828, 96, 58, 0xc792ea],
+    ];
+    stallData.forEach(([x, y, w, h, accent]) => {
+      stalls.fillStyle(accent, 1);
+      stalls.fillRoundedRect(x, y, w, 20, 6);
+      stalls.fillStyle(0xf6f2ea, 1);
+      stalls.fillRoundedRect(x + 4, y + 18, w - 8, h - 18, 5);
+      stalls.fillStyle(0x475167, 1);
+      stalls.fillRect(x + 10, y + h, 6, 18);
+      stalls.fillRect(x + w - 16, y + h, 6, 18);
+    });
+
+    const lamps = this.add.graphics();
+    const lampXs = [162, 496, 824, 1220, 1564, 1890];
+    lampXs.forEach((x) => {
+      lamps.fillStyle(0x47516a, 1);
+      lamps.fillRect(x, 214, 8, 84);
+      lamps.fillRect(x, 730, 8, 84);
+      lamps.fillStyle(0xffefac, 0.95);
+      lamps.fillCircle(x + 4, 206, 15);
+      lamps.fillCircle(x + 4, 722, 15);
+      lamps.fillStyle(0xffefac, 0.12);
+      lamps.fillCircle(x + 4, 206, 34);
+      lamps.fillCircle(x + 4, 722, 34);
+    });
+
+    const trees = this.add.graphics();
+    const treeSpots = [
+      [246, 316],
+      [1418, 316],
+      [1520, 316],
+      [236, 720],
+      [1450, 720],
+      [1546, 720],
+    ];
+    treeSpots.forEach(([x, y]) => {
+      trees.fillStyle(0x6c778a, 1);
+      trees.fillRoundedRect(x - 12, y, 24, 20, 5);
+      trees.fillStyle(0x4a9b68, 1);
+      trees.fillCircle(x, y - 12, 18);
+      trees.fillCircle(x - 14, y - 4, 14);
+      trees.fillCircle(x + 14, y - 2, 14);
     });
 
     const frame = this.add.graphics();
     frame.lineStyle(4, 0xffcf70, 0.95);
-    frame.strokeRoundedRect(48, 54, ROOM_WIDTH - 96, ROOM_HEIGHT - 108, 22);
+    frame.strokeRoundedRect(42, 48, ROOM_WIDTH - 84, ROOM_HEIGHT - 96, 24);
 
     const vignette = this.add.graphics();
     vignette.fillGradientStyle(0x0b0f15, 0x0b0f15, 0x0b0f15, 0x0b0f15, 0.42, 0.06, 0.42, 0.06);
     vignette.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
 
     this.add
-      .text(40, 38, 'PIXEL ROOM // OFFICE LOBBY', {
+      .text(42, 38, 'PIXEL ROOM // MERCHANT STREET', {
         fontFamily: 'Consolas, Monaco, monospace',
         fontSize: '18px',
         color: '#fff3c9',
       })
       .setDepth(2000)
       .setScrollFactor(0);
+
+    this.add
+      .text(ROOM_WIDTH - 42, 38, 'Cafe / Vinyl / Books / Arcade / Bakery', {
+        fontFamily: 'Consolas, Monaco, monospace',
+        fontSize: '14px',
+        color: '#bfd2e3',
+      })
+      .setOrigin(1, 0)
+      .setDepth(2000)
+      .setScrollFactor(0);
+  }
+
+  private updateCameraFollow() {
+    if (!this.localPlayerId) {
+      return;
+    }
+
+    const localSprite = this.sprites.get(this.localPlayerId);
+    if (!localSprite) {
+      return;
+    }
+
+    this.cameras.main.startFollow(localSprite.container, true, 0.08, 0.08);
+    this.cameras.main.setDeadzone(180, 120);
   }
 
   private createAnimations() {

@@ -6,10 +6,10 @@ const PORT = process.env.PORT || 3001;
 const MAX_MESSAGE_HISTORY = 40;
 const AVATAR_OPTIONS = ['alice', 'grace', 'jack', 'joe', 'lea', 'monica', 'stephen', 'tom'];
 const ROOM_BOUNDS = {
-  minX: 64,
-  maxX: 1088,
-  minY: 88,
-  maxY: 716,
+  minX: 96,
+  maxX: 1952,
+  minY: 128,
+  maxY: 936,
 };
 const CLIENT_URL = process.env.CLIENT_URL || '';
 const allowedOrigins = CLIENT_URL
