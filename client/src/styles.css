@@ -1,0 +1,314 @@
+:root {
+  font-family: Consolas, Monaco, 'Lucida Console', monospace;
+  color: #f5efe4;
+  background:
+    radial-gradient(circle at top left, rgba(58, 134, 255, 0.18), transparent 30%),
+    radial-gradient(circle at top right, rgba(255, 200, 87, 0.18), transparent 28%),
+    linear-gradient(180deg, #0d131d 0%, #091017 100%);
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.hero-panel {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: end;
+  margin-bottom: 20px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #ffd166;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 0.95;
+}
+
+.lead {
+  max-width: 760px;
+  margin: 12px 0 0;
+  color: #bfd2e3;
+}
+
+.status-card,
+.card,
+.stage-panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 15, 22, 0.82);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.status-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  min-width: 240px;
+}
+
+.status-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  box-shadow: 0 0 12px currentColor;
+}
+
+.status-idle {
+  color: #b0b7c6;
+  background: #b0b7c6;
+}
+
+.status-connecting {
+  color: #ffd166;
+  background: #ffd166;
+}
+
+.status-connected {
+  color: #06d6a0;
+  background: #06d6a0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 430px);
+  gap: 18px;
+}
+
+.stage-panel {
+  padding: 14px;
+  border-radius: 24px;
+}
+
+.stage-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #95a6ba;
+  font-size: 0.86rem;
+  margin-bottom: 12px;
+}
+
+.game-shell {
+  min-height: 768px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #111827;
+}
+
+.sidebar {
+  display: grid;
+  gap: 16px;
+}
+
+.card {
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.card h2 {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  color: #fff1ba;
+}
+
+.join-card label,
+.chat-form {
+  display: grid;
+  gap: 8px;
+}
+
+.join-card {
+  display: grid;
+  gap: 14px;
+}
+
+input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f5efe4;
+  padding: 11px 12px;
+}
+
+input:focus {
+  outline: 2px solid rgba(58, 134, 255, 0.55);
+  border-color: transparent;
+}
+
+button {
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffd166 0%, #f39a34 100%);
+  color: #1a1e24;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.color-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.color-chip span {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+}
+
+.avatar-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.avatar-choice {
+  background: rgba(255, 255, 255, 0.04);
+  color: #f5efe4;
+  padding: 10px 12px;
+  font-weight: 600;
+}
+
+.avatar-choice-active {
+  background: linear-gradient(180deg, #3a86ff 0%, #1d5fd0 100%);
+  color: #ffffff;
+}
+
+.roster {
+  display: grid;
+  gap: 10px;
+}
+
+.roster-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.roster-item p {
+  margin: 3px 0 0;
+  color: #8ca0b7;
+  font-size: 0.82rem;
+}
+
+.roster-color {
+  width: 12px;
+  height: 40px;
+  border-radius: 999px;
+}
+
+.chat-card {
+  min-height: 360px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 12px;
+}
+
+.chat-log {
+  overflow: auto;
+  min-height: 200px;
+  max-height: 380px;
+  display: grid;
+  gap: 10px;
+  padding-right: 6px;
+}
+
+.chat-row {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.chat-row header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+  color: #ffd166;
+  font-size: 0.8rem;
+}
+
+.chat-row p {
+  margin: 0;
+  color: #f4eee2;
+  word-break: break-word;
+}
+
+.chat-form {
+  grid-template-columns: 1fr auto;
+}
+
+@media (max-width: 1180px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .game-shell {
+    min-height: 58vh;
+  }
+}
+
+@media (max-width: 760px) {
+  .app {
+    padding: 16px;
+  }
+
+  .hero-panel,
+  .stage-header,
+  .chat-form {
+    display: grid;
+  }
+}

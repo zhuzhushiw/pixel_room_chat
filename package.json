@@ -1,0 +1,23 @@
+{
+  "name": "pixel-room-chat",
+  "version": "1.0.0",
+  "description": "Browser-based pixel chat room with multiplayer avatars.",
+  "scripts": {
+    "dev": "concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "build": "npm --prefix client run build",
+    "start": "npm --prefix server run start"
+  },
+  "keywords": [
+    "chat",
+    "multiplayer",
+    "phaser",
+    "socket.io",
+    "pixel-art"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
