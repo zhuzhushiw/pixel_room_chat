@@ -14,25 +14,20 @@ type SceneCallbacks = {
   onMove: (payload: { x: number; y: number; direction: Direction; isMoving: boolean }) => void;
 };
 
-type TileObjectProperty = {
-  name: string;
-  type?: string;
-  value: boolean | number | string;
+type Point = {
+  x: number;
+  y: number;
 };
 
-type TileObject = Phaser.Types.Tilemaps.TiledObject & {
-  properties?: TileObjectProperty[];
-};
-
-const ROOM_WIDTH = 2048;
-const ROOM_HEIGHT = 1024;
+const ROOM_WIDTH = 2200;
+const ROOM_HEIGHT = 1400;
 const ROOM_BOUNDS = {
-  minX: 96,
-  maxX: ROOM_WIDTH - 96,
-  minY: 128,
-  maxY: ROOM_HEIGHT - 88,
+  minX: 300,
+  maxX: 1760,
+  minY: 410,
+  maxY: 980,
 };
-const MOVE_SPEED = 170;
+const MOVE_SPEED = 180;
 
 const FRAME_GROUPS: Record<
   Direction,
@@ -61,8 +56,7 @@ const FRAME_GROUPS: Record<
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-const getObjectProperty = (object: TileObject, name: string) =>
-  object.properties?.find((property: TileObjectProperty) => property.name === name)?.value;
+const hexToColor = (hex: string) => Phaser.Display.Color.HexStringToColor(hex).color;
 
 export class PixelScene extends Phaser.Scene {
   private readonly callbacks: SceneCallbacks;
@@ -94,14 +88,23 @@ export class PixelScene extends Phaser.Scene {
       });
     });
 
-    this.load.image('merchant-street-tiles', '/assets/tiled/merchant-street-tiles.png');
-    this.load.tilemapTiledJSON('merchant-street-map', '/assets/tiled/merchant-street.json');
+    this.load.spritesheet('oga-buildings-1', '/assets/open-source/oga-isometric-buildings-1.png', {
+      frameWidth: 64,
+      frameHeight: 96,
+    });
+    this.load.spritesheet('oga-roofs', '/assets/open-source/oga-isometric-roofs.png', {
+      frameWidth: 143,
+      frameHeight: 92,
+    });
   }
 
   create() {
     this.cameras.main.setBounds(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
-    this.cameras.main.setBackgroundColor('#060a14');
-    this.createTilemapWorld();
+    this.cameras.main.setBackgroundColor('#c9d4e6');
+    this.cameras.main.roundPixels = true;
+
+    this.createBackdrop();
+    this.createCityBlock();
     this.createAnimations();
     this.createViewportHud();
 
@@ -119,30 +122,36 @@ export class PixelScene extends Phaser.Scene {
       return;
     }
 
+    const gridVelocity = new Phaser.Math.Vector2(0, 0);
     let direction: Direction = player.direction;
-    let velocity = new Phaser.Math.Vector2(0, 0);
 
     if (this.cursors.left.isDown || this.wasd.A.isDown) {
-      velocity.x = -1;
+      gridVelocity.x -= 1;
       direction = 'left';
     } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
-      velocity.x = 1;
+      gridVelocity.x += 1;
       direction = 'right';
     }
 
     if (this.cursors.up.isDown || this.wasd.W.isDown) {
-      velocity.y = -1;
+      gridVelocity.y -= 1;
       direction = 'up';
     } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
-      velocity.y = 1;
+      gridVelocity.y += 1;
       direction = 'down';
     }
 
-    const isMoving = velocity.lengthSq() > 0;
+    const isMoving = gridVelocity.lengthSq() > 0;
     if (isMoving) {
-      velocity = velocity.normalize().scale((MOVE_SPEED * delta) / 1000);
-      player.x = clamp(player.x + velocity.x, ROOM_BOUNDS.minX, ROOM_BOUNDS.maxX);
-      player.y = clamp(player.y + velocity.y, ROOM_BOUNDS.minY, ROOM_BOUNDS.maxY);
+      const screenVelocity = new Phaser.Math.Vector2(
+        gridVelocity.x - gridVelocity.y,
+        (gridVelocity.x + gridVelocity.y) * 0.55,
+      )
+        .normalize()
+        .scale((MOVE_SPEED * delta) / 1000);
+
+      player.x = clamp(player.x + screenVelocity.x, ROOM_BOUNDS.minX, ROOM_BOUNDS.maxX);
+      player.y = clamp(player.y + screenVelocity.y, ROOM_BOUNDS.minY, ROOM_BOUNDS.maxY);
       player.direction = direction;
       player.isMoving = true;
       this.renderPlayer(player);
@@ -204,308 +213,593 @@ export class PixelScene extends Phaser.Scene {
     this.bubbleTimers.set(message.playerId, timer);
   }
 
-  private createTilemapWorld() {
-    const map = this.make.tilemap({ key: 'merchant-street-map' });
-    const tileset = map.addTilesetImage('merchant-street-tiles', 'merchant-street-tiles');
+  private createBackdrop() {
+    const sky = this.add.graphics();
+    sky.setDepth(-100);
+    sky.fillGradientStyle(0xcfd8e8, 0xcfd8e8, 0x7e90b1, 0x6d7f9f, 1);
+    sky.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
 
-    if (!tileset) {
-      throw new Error('merchant-street tileset failed to load');
-    }
-
-    const groundLayer = map.createLayer('Ground', tileset, 0, 0);
-    const structuresLayer = map.createLayer('Structures', tileset, 0, 0);
-    const decorLayer = map.createLayer('Decor', tileset, 0, 0);
-
-    groundLayer?.setDepth(0);
-    structuresLayer?.setDepth(10);
-    decorLayer?.setDepth(20);
-
-    this.addSkylineBackdrop();
-    this.addStreetAtmosphere();
-    this.addShopSigns(map.getObjectLayer('ShopSigns') ?? undefined);
-  }
-
-  private addSkylineBackdrop() {
-    const skyline = this.add.graphics();
-    skyline.setDepth(-20);
-    skyline.fillGradientStyle(0x030510, 0x030510, 0x0d1630, 0x15244d, 1);
-    skyline.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
-
-    const stars = this.add.graphics();
-    stars.setDepth(-19);
-    for (let i = 0; i < 120; i += 1) {
-      stars.fillStyle(0xdce8ff, Phaser.Math.FloatBetween(0.15, 0.65));
-      stars.fillCircle(Phaser.Math.Between(10, ROOM_WIDTH - 10), Phaser.Math.Between(4, 180), Phaser.Math.Between(1, 2));
-    }
-
-    const towers = this.add.graphics();
-    towers.setDepth(-18);
-    const towerData = [
-      { x: 24, y: 82, w: 118, h: 212, color: 0x12203d, windows: 0x44caff },
-      { x: 156, y: 34, w: 96, h: 262, color: 0x17284a, windows: 0xff68d6 },
-      { x: 268, y: 58, w: 134, h: 236, color: 0x132340, windows: 0x77dcff },
-      { x: 430, y: 24, w: 168, h: 278, color: 0x1a2648, windows: 0x9d77ff },
-      { x: 636, y: 72, w: 114, h: 218, color: 0x13203a, windows: 0x39dfff },
-      { x: 770, y: 18, w: 186, h: 290, color: 0x18264b, windows: 0xff6bd9 },
-      { x: 978, y: 62, w: 126, h: 232, color: 0x12203d, windows: 0x7de9ff },
-      { x: 1128, y: 28, w: 172, h: 274, color: 0x16254a, windows: 0x60beff },
-      { x: 1344, y: 86, w: 108, h: 208, color: 0x12203d, windows: 0xffa74e },
-      { x: 1474, y: 42, w: 142, h: 252, color: 0x19294c, windows: 0x46e6ff },
-      { x: 1648, y: 18, w: 186, h: 288, color: 0x16254a, windows: 0xff68d6 },
-      { x: 1864, y: 66, w: 136, h: 228, color: 0x10203c, windows: 0x84efff },
+    const horizon = this.add.graphics();
+    horizon.setDepth(-95);
+    const towers = [
+      { x: 20, w: 180, h: 300, color: 0x6c7c98 },
+      { x: 160, w: 130, h: 360, color: 0x70819e },
+      { x: 280, w: 170, h: 330, color: 0x677893 },
+      { x: 420, w: 220, h: 420, color: 0x61728c },
+      { x: 620, w: 160, h: 300, color: 0x7b89a4 },
+      { x: 770, w: 180, h: 390, color: 0x65758e },
+      { x: 980, w: 220, h: 450, color: 0x5e6f88 },
+      { x: 1180, w: 150, h: 320, color: 0x70809a },
+      { x: 1330, w: 240, h: 400, color: 0x687893 },
+      { x: 1590, w: 210, h: 360, color: 0x73839f },
+      { x: 1810, w: 170, h: 280, color: 0x66758f },
+      { x: 1970, w: 190, h: 340, color: 0x72819b },
     ];
 
-    towerData.forEach((tower) => {
-      towers.fillStyle(tower.color, 0.96);
-      towers.fillRoundedRect(tower.x, tower.y, tower.w, tower.h, 10);
-      towers.fillStyle(0x223764, 0.85);
-      towers.fillRoundedRect(tower.x + 4, tower.y + 4, tower.w - 8, 10, 6);
-
-      for (let x = tower.x + 12; x < tower.x + tower.w - 12; x += 16) {
-        for (let y = tower.y + 24; y < tower.y + tower.h - 16; y += 18) {
-          towers.fillStyle(tower.windows, Phaser.Math.FloatBetween(0.1, 0.32));
-          towers.fillRect(x, y, 6, 10);
+    towers.forEach((tower) => {
+      horizon.fillStyle(tower.color, 0.95);
+      horizon.fillRect(tower.x, 130 + (430 - tower.h), tower.w, tower.h);
+      horizon.fillStyle(0xe9effa, 0.2);
+      for (let wx = tower.x + 10; wx < tower.x + tower.w - 10; wx += 18) {
+        for (let wy = 160 + (430 - tower.h); wy < 120 + (430 - tower.h) + tower.h; wy += 18) {
+          horizon.fillRect(wx, wy, 7, 10);
         }
       }
     });
 
-    const ringRoad = this.add.graphics();
-    ringRoad.setDepth(-16);
-    ringRoad.lineStyle(18, 0x55c5ff, 0.2);
-    this.strokeBezier(
-      ringRoad,
-      new Phaser.Curves.CubicBezier(
-        new Phaser.Math.Vector2(120, 308),
-        new Phaser.Math.Vector2(380, 170),
-        new Phaser.Math.Vector2(650, 164),
-        new Phaser.Math.Vector2(934, 236),
-      ),
-    );
-    this.strokeBezier(
-      ringRoad,
-      new Phaser.Curves.CubicBezier(
-        new Phaser.Math.Vector2(934, 236),
-        new Phaser.Math.Vector2(1232, 314),
-        new Phaser.Math.Vector2(1498, 340),
-        new Phaser.Math.Vector2(1930, 220),
-      ),
-    );
-
-    ringRoad.lineStyle(8, 0xff68d6, 0.45);
-    this.strokeBezier(
-      ringRoad,
-      new Phaser.Curves.CubicBezier(
-        new Phaser.Math.Vector2(118, 310),
-        new Phaser.Math.Vector2(380, 178),
-        new Phaser.Math.Vector2(646, 172),
-        new Phaser.Math.Vector2(934, 244),
-      ),
-    );
-    this.strokeBezier(
-      ringRoad,
-      new Phaser.Curves.CubicBezier(
-        new Phaser.Math.Vector2(934, 244),
-        new Phaser.Math.Vector2(1226, 318),
-        new Phaser.Math.Vector2(1502, 346),
-        new Phaser.Math.Vector2(1928, 226),
-      ),
-    );
-
-    const haze = this.add.graphics();
-    haze.setDepth(-12);
-    haze.fillGradientStyle(0x58b7ff, 0x58b7ff, 0x090f18, 0x090f18, 0.12, 0.03, 0.22, 0.02);
-    haze.fillRect(0, 138, ROOM_WIDTH, 320);
+    const fog = this.add.graphics();
+    fog.setDepth(-90);
+    fog.fillGradientStyle(0xffffff, 0xffffff, 0xcfd8e8, 0xcfd8e8, 0.24, 0.24, 0.02, 0.02);
+    fog.fillRect(0, 240, ROOM_WIDTH, 220);
   }
 
-  private addStreetAtmosphere() {
-    const avenueGlow = this.add.graphics();
-    avenueGlow.setDepth(15);
+  private createCityBlock() {
+    this.drawGroundPlanes();
+    this.addBuilding(48, 450, 490, 2.4, 0);
+    this.addBuilding(49, 575, 500, 2.4, 0);
+    this.addBuilding(50, 700, 510, 2.4, 0);
+    this.addRoof(1, 580, 315, 2.15);
 
-    const glowSpots = [
-      [156, 352, 0x32ddff],
-      [412, 352, 0xff68d6],
-      [668, 352, 0x32ddff],
-      [924, 352, 0xffae4c],
-      [1180, 352, 0x32ddff],
-      [1436, 352, 0xff68d6],
-      [1692, 352, 0x32ddff],
-      [1948, 352, 0xffae4c],
-      [224, 688, 0xff68d6],
-      [548, 688, 0x32ddff],
-      [872, 688, 0xffae4c],
-      [1196, 688, 0x32ddff],
-      [1520, 688, 0xff68d6],
-      [1844, 688, 0x32ddff],
-    ];
+    this.addBuilding(42, 925, 485, 2.3, 0);
+    this.addBuilding(43, 1040, 492, 2.3, 0);
+    this.addBuilding(44, 1160, 500, 2.3, 0);
+    this.addRoof(0, 1045, 312, 2.15);
 
-    glowSpots.forEach(([x, y, color]) => {
-      avenueGlow.fillStyle(Number(color), 0.11);
-      avenueGlow.fillCircle(Number(x), Number(y), 56);
-    });
+    this.addBuilding(6, 1445, 470, 2.45, -10);
+    this.addBuilding(7, 1570, 477, 2.45, -10);
+    this.addBuilding(8, 1695, 486, 2.45, -10);
+    this.addRoof(4, 1570, 302, 2.1);
 
-    const railTrails = this.add.graphics();
-    railTrails.setDepth(14);
-    railTrails.lineStyle(12, 0x32ddff, 0.18);
-    this.strokeBezier(
-      railTrails,
-      new Phaser.Curves.CubicBezier(
-        new Phaser.Math.Vector2(0, 500),
-        new Phaser.Math.Vector2(260, 452),
-        new Phaser.Math.Vector2(494, 452),
-        new Phaser.Math.Vector2(774, 510),
-      ),
-    );
-    this.strokeBezier(
-      railTrails,
-      new Phaser.Curves.CubicBezier(
-        new Phaser.Math.Vector2(774, 510),
-        new Phaser.Math.Vector2(1114, 582),
-        new Phaser.Math.Vector2(1448, 590),
-        new Phaser.Math.Vector2(2048, 470),
-      ),
-    );
+    this.addBuilding(108, 1510, 980, 2.05, 10);
+    this.addBuilding(109, 1610, 987, 2.05, 10);
+    this.addBuilding(110, 1710, 994, 2.05, 10);
 
-    railTrails.lineStyle(5, 0xff68d6, 0.42);
-    this.strokeBezier(
-      railTrails,
-      new Phaser.Curves.CubicBezier(
-        new Phaser.Math.Vector2(0, 504),
-        new Phaser.Math.Vector2(260, 458),
-        new Phaser.Math.Vector2(494, 458),
-        new Phaser.Math.Vector2(774, 514),
-      ),
-    );
-    this.strokeBezier(
-      railTrails,
-      new Phaser.Curves.CubicBezier(
-        new Phaser.Math.Vector2(774, 514),
-        new Phaser.Math.Vector2(1114, 586),
-        new Phaser.Math.Vector2(1448, 596),
-        new Phaser.Math.Vector2(2048, 476),
-      ),
-    );
+    this.addStoreLabel('SUPERMARKET', 515, 408, '#e24c3d');
+    this.addStoreLabel('FRUIT HALL', 1036, 404, '#4761d9');
+    this.addStoreLabel('MARKET', 1575, 388, '#ef8f25');
 
-    const wetBloom = this.add.graphics();
-    wetBloom.setDepth(13);
-    wetBloom.fillGradientStyle(0x34e3ff, 0x34e3ff, 0x34e3ff, 0x34e3ff, 0.04, 0.01, 0.12, 0.02);
-    wetBloom.fillRect(0, 438, ROOM_WIDTH, 190);
-    wetBloom.fillGradientStyle(0xff68d6, 0xff68d6, 0xff68d6, 0xff68d6, 0.02, 0.005, 0.07, 0.01);
-    wetBloom.fillRect(0, 628, ROOM_WIDTH, 150);
+    this.addMarketStand(820, 615, '#f2f2f2');
+    this.addMarketStand(905, 657, '#f7d24a');
+    this.addMarketStand(997, 705, '#f39a39');
 
-    const rain = this.add.graphics();
-    rain.setDepth(850);
-    for (let i = 0; i < 180; i += 1) {
-      const x = Phaser.Math.Between(-80, ROOM_WIDTH + 40);
-      const y = Phaser.Math.Between(-10, ROOM_HEIGHT - 50);
-      const length = Phaser.Math.Between(10, 26);
-      rain.lineStyle(1, 0xc2e8ff, Phaser.Math.FloatBetween(0.04, 0.14));
-      rain.beginPath();
-      rain.moveTo(x, y);
-      rain.lineTo(x - 10, y + length);
-      rain.strokePath();
-    }
+    this.addStreetLamp(760, 612);
+    this.addStreetLamp(960, 710);
+    this.addStreetLamp(1220, 836);
 
-    const vignette = this.add.graphics();
-    vignette.setDepth(900);
-    vignette.fillGradientStyle(0x050810, 0x050810, 0x050810, 0x050810, 0.3, 0.04, 0.34, 0.03);
-    vignette.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
+    this.addBench(1360, 903);
+    this.addBench(1270, 860);
+
+    this.addDecorTree(950, 1030);
+    this.addDecorTree(1180, 1110);
+
+    this.addCar(1245, 655, 0xd84f45);
+    this.addCar(1425, 730, 0xf1cb42, 'TAXI');
+    this.addVan(985, 840, 0x4ab1e0);
+    this.addUtilityCart(760, 805, 0x93b362);
+
+    this.addCrateStack(865, 590);
+    this.addCrateStack(930, 628);
+    this.addBin(1775, 890);
+
+    this.addNpc('lea', 700, 540, 'down', '#ffe082');
+    this.addNpc('jack', 812, 580, 'down', '#9fd0ff');
+    this.addNpc('monica', 1000, 645, 'down', '#f7a1c4');
+    this.addNpc('grace', 1520, 865, 'left', '#ffd166');
   }
 
-  private addShopSigns(objectLayer?: Phaser.Tilemaps.ObjectLayer) {
-    if (!objectLayer) {
-      return;
+  private drawGroundPlanes() {
+    const graphics = this.add.graphics();
+    graphics.setDepth(-10);
+
+    this.fillPolygon(
+      graphics,
+      [
+        { x: 170, y: 420 },
+        { x: 1090, y: 420 },
+        { x: 1440, y: 595 },
+        { x: 520, y: 595 },
+      ],
+      0xe8eaee,
+      1,
+    );
+    this.fillPolygon(
+      graphics,
+      [
+        { x: 65, y: 595 },
+        { x: 1325, y: 595 },
+        { x: 1840, y: 852 },
+        { x: 575, y: 852 },
+      ],
+      0x57595d,
+      1,
+    );
+    this.fillPolygon(
+      graphics,
+      [
+        { x: 575, y: 852 },
+        { x: 1840, y: 852 },
+        { x: 2140, y: 1000 },
+        { x: 875, y: 1000 },
+      ],
+      0xf1f3f6,
+      1,
+    );
+
+    this.fillPolygon(
+      graphics,
+      [
+        { x: 144, y: 470 },
+        { x: 1064, y: 470 },
+        { x: 1418, y: 648 },
+        { x: 498, y: 648 },
+      ],
+      0xffffff,
+      0.36,
+    );
+
+    this.fillPolygon(
+      graphics,
+      [
+        { x: 520, y: 595 },
+        { x: 1440, y: 595 },
+        { x: 1458, y: 610 },
+        { x: 538, y: 610 },
+      ],
+      0xd4d8de,
+      1,
+    );
+
+    this.fillPolygon(
+      graphics,
+      [
+        { x: 575, y: 852 },
+        { x: 1840, y: 852 },
+        { x: 1858, y: 868 },
+        { x: 594, y: 868 },
+      ],
+      0xd8dde3,
+      1,
+    );
+
+    for (let i = 0; i < 6; i += 1) {
+      const offset = i * 180;
+      this.fillPolygon(
+        graphics,
+        [
+          { x: 730 + offset, y: 636 + offset * 0.1 },
+          { x: 802 + offset, y: 636 + offset * 0.1 },
+          { x: 825 + offset, y: 648 + offset * 0.1 },
+          { x: 753 + offset, y: 648 + offset * 0.1 },
+        ],
+        0xf7f2c4,
+        1,
+      );
     }
 
-    objectLayer.objects.forEach((rawObject) => {
-      const object = rawObject as TileObject;
-      const width = object.width ?? 160;
-      const x = (object.x ?? 0) + width / 2;
-      const y = (object.y ?? 0) - 18;
-      const color = typeof getObjectProperty(object, 'color') === 'string' ? String(getObjectProperty(object, 'color')) : '#fff3c9';
-      const size = typeof getObjectProperty(object, 'size') === 'number' ? Number(getObjectProperty(object, 'size')) : 20;
-      const caption =
-        typeof getObjectProperty(object, 'caption') === 'string'
-          ? String(getObjectProperty(object, 'caption'))
-          : object.type === 'district'
-            ? 'street district'
-            : 'open late';
+    for (let i = 0; i < 7; i += 1) {
+      const x = 650 + i * 145;
+      const y = 733 + i * 1.5;
+      this.fillPolygon(
+        graphics,
+        [
+          { x, y },
+          { x: x + 48, y },
+          { x: x + 66, y: y + 9 },
+          { x: x + 18, y: y + 9 },
+        ],
+        0xffd94b,
+        0.75,
+      );
+    }
 
-      const glow = this.add.rectangle(x, y + 2, width + 28, 30, Phaser.Display.Color.HexStringToColor(color).color, 0.12);
-      glow.setDepth((object.y ?? 0) + 5);
-      this.tweens.add({
-        targets: glow,
-        alpha: 0.32,
-        duration: Phaser.Math.Between(1400, 2200),
-        yoyo: true,
-        repeat: -1,
-      });
+    this.fillPolygon(
+      graphics,
+      [
+        { x: 1010, y: 858 },
+        { x: 1210, y: 858 },
+        { x: 1290, y: 899 },
+        { x: 1090, y: 899 },
+      ],
+      0xffffff,
+      0.96,
+    );
+    this.fillPolygon(
+      graphics,
+      [
+        { x: 1088, y: 790 },
+        { x: 1146, y: 790 },
+        { x: 1270, y: 852 },
+        { x: 1211, y: 852 },
+      ],
+      0xffffff,
+      1,
+    );
+  }
 
-      const title = this.add
-        .text(x, y, object.name ?? '', {
-          fontFamily: 'Consolas, Monaco, monospace',
-          fontSize: `${size}px`,
-          color,
-          stroke: '#142033',
-          strokeThickness: 6,
-          fontStyle: 'bold',
-        })
-        .setOrigin(0.5, 0.5)
-        .setDepth((object.y ?? 0) + 8);
-      this.tweens.add({
-        targets: title,
-        alpha: 0.82,
-        duration: Phaser.Math.Between(1500, 2600),
-        yoyo: true,
-        repeat: -1,
-      });
+  private fillPolygon(graphics: Phaser.GameObjects.Graphics, points: Point[], color: number, alpha: number) {
+    graphics.fillStyle(color, alpha);
+    graphics.beginPath();
+    graphics.moveTo(points[0].x, points[0].y);
+    points.slice(1).forEach((point) => graphics.lineTo(point.x, point.y));
+    graphics.closePath();
+    graphics.fillPath();
+  }
 
+  private addBuilding(frame: number, x: number, y: number, scale: number, depthOffset: number) {
+    this.add.sprite(x, y, 'oga-buildings-1', frame).setOrigin(0.5, 1).setScale(scale).setDepth(y + depthOffset);
+  }
+
+  private addRoof(frame: number, x: number, y: number, scale: number) {
+    this.add.sprite(x, y, 'oga-roofs', frame).setOrigin(0.5, 1).setScale(scale).setDepth(y - 120);
+  }
+
+  private addStoreLabel(text: string, x: number, y: number, color: string) {
+    this.add
+      .text(x, y, text, {
+        fontFamily: 'Consolas, Monaco, monospace',
+        fontSize: '22px',
+        fontStyle: 'bold',
+        color,
+        backgroundColor: '#ffffffdd',
+        padding: { left: 8, right: 8, top: 4, bottom: 4 },
+      })
+      .setOrigin(0.5, 0.5)
+      .setRotation(-0.42)
+      .setDepth(y + 4);
+  }
+
+  private addMarketStand(x: number, y: number, canopyColor: string) {
+    const stand = this.add.graphics();
+    stand.setDepth(y);
+    this.fillPolygon(
+      stand,
+      [
+        { x: x - 68, y: y - 22 },
+        { x: x - 8, y: y - 22 },
+        { x: x + 34, y: y },
+        { x: x - 27, y: y },
+      ],
+      hexToColor(canopyColor),
+      1,
+    );
+    this.fillPolygon(
+      stand,
+      [
+        { x: x - 42, y: y },
+        { x: x + 24, y: y },
+        { x: x + 46, y: y + 12 },
+        { x: x - 21, y: y + 12 },
+      ],
+      0x8b5a34,
+      1,
+    );
+    this.fillPolygon(
+      stand,
+      [
+        { x: x - 35, y: y + 14 },
+        { x: x + 30, y: y + 14 },
+        { x: x + 50, y: y + 24 },
+        { x: x - 15, y: y + 24 },
+      ],
+      0xd39b59,
+      1,
+    );
+    stand.fillStyle(0xa2cb63, 1);
+    stand.fillEllipse(x - 12, y + 1, 22, 10);
+    stand.fillStyle(0xf7a544, 1);
+    stand.fillEllipse(x + 12, y + 7, 18, 8);
+  }
+
+  private addStreetLamp(x: number, y: number) {
+    const lamp = this.add.graphics();
+    lamp.setDepth(y);
+    lamp.fillStyle(0x11151d, 0.22);
+    lamp.fillEllipse(x - 5, y + 12, 26, 12);
+    lamp.fillStyle(0x697080, 1);
+    lamp.fillRect(x - 2, y - 90, 4, 92);
+    lamp.fillStyle(0xf7f7f8, 1);
+    lamp.fillEllipse(x - 8, y - 102, 18, 12);
+    lamp.fillStyle(0xeff0f2, 0.55);
+    lamp.fillEllipse(x - 18, y - 74, 38, 20);
+  }
+
+  private addBench(x: number, y: number) {
+    const bench = this.add.graphics();
+    bench.setDepth(y);
+    this.fillPolygon(
+      bench,
+      [
+        { x: x - 36, y: y - 12 },
+        { x: x + 8, y: y - 12 },
+        { x: x + 30, y: y },
+        { x: x - 14, y },
+      ],
+      0x7a5637,
+      1,
+    );
+    bench.fillStyle(0x4f6179, 1);
+    bench.fillRect(x - 24, y - 6, 4, 22);
+    bench.fillRect(x + 8, y + 8, 4, 22);
+  }
+
+  private addDecorTree(x: number, y: number) {
+    const tree = this.add.graphics();
+    tree.setDepth(y);
+    tree.fillStyle(0x0c1220, 0.15);
+    tree.fillEllipse(x - 5, y + 18, 86, 26);
+    tree.fillStyle(0x7c4f3d, 1);
+    tree.fillRect(x + 2, y - 12, 10, 42);
+    tree.fillStyle(0x1fb267, 1);
+    tree.fillEllipse(x - 14, y - 26, 42, 26);
+    tree.fillStyle(0x36d685, 1);
+    tree.fillEllipse(x + 10, y - 42, 46, 30);
+    tree.fillStyle(0x0f9862, 1);
+    tree.fillEllipse(x + 27, y - 18, 38, 24);
+  }
+
+  private addCar(x: number, y: number, bodyColor: number, label?: string) {
+    const car = this.add.graphics();
+    car.setDepth(y);
+    car.fillStyle(0x11151c, 0.18);
+    car.fillEllipse(x - 28, y + 20, 124, 28);
+    this.fillPolygon(
+      car,
+      [
+        { x: x - 54, y: y + 4 },
+        { x: x + 4, y: y - 24 },
+        { x: x + 60, y: y + 3 },
+        { x: x + 2, y: y + 32 },
+      ],
+      bodyColor,
+      1,
+    );
+    this.fillPolygon(
+      car,
+      [
+        { x: x - 25, y: y - 7 },
+        { x: x + 5, y: y - 22 },
+        { x: x + 37, y: y - 6 },
+        { x: x + 5, y: y + 9 },
+      ],
+      0xd8edf7,
+      1,
+    );
+    this.fillPolygon(
+      car,
+      [
+        { x: x - 44, y: y + 8 },
+        { x: x + 4, y: y - 15 },
+        { x: x + 49, y: y + 7 },
+        { x: x + 1, y: y + 29 },
+      ],
+      0xffffff,
+      0.1,
+    );
+    car.fillStyle(0x25272b, 1);
+    car.fillEllipse(x - 28, y + 21, 28, 14);
+    car.fillEllipse(x + 30, y + 21, 28, 14);
+
+    if (label) {
       this.add
-        .text(x, y + 28, caption, {
+        .text(x + 18, y - 19, label, {
           fontFamily: 'Consolas, Monaco, monospace',
-          fontSize: '11px',
-          color: '#f2f0e8',
-          backgroundColor: '#122034cc',
-          padding: { left: 6, right: 6, top: 2, bottom: 2 },
+          fontSize: '12px',
+          color: '#332400',
+          backgroundColor: '#fff3b4',
+          padding: { left: 4, right: 4, top: 2, bottom: 2 },
         })
-        .setOrigin(0.5, 0.5)
-        .setDepth((object.y ?? 0) + 7);
-    });
+        .setOrigin(0.5)
+        .setRotation(-0.48)
+        .setDepth(y + 2);
+    }
+  }
+
+  private addVan(x: number, y: number, bodyColor: number) {
+    const van = this.add.graphics();
+    van.setDepth(y);
+    van.fillStyle(0x11151c, 0.16);
+    van.fillEllipse(x - 5, y + 26, 150, 32);
+    this.fillPolygon(
+      van,
+      [
+        { x: x - 76, y: y - 8 },
+        { x: x + 4, y: y - 47 },
+        { x: x + 88, y: y - 5 },
+        { x: x + 10, y: y + 34 },
+      ],
+      bodyColor,
+      1,
+    );
+    this.fillPolygon(
+      van,
+      [
+        { x: x - 18, y: y - 35 },
+        { x: x + 15, y: y - 51 },
+        { x: x + 70, y: y - 23 },
+        { x: x + 38, y: y - 7 },
+      ],
+      0xe9f6ff,
+      1,
+    );
+    this.fillPolygon(
+      van,
+      [
+        { x: x + 18, y: y - 3 },
+        { x: x + 55, y: y - 22 },
+        { x: x + 79, y: y - 10 },
+        { x: x + 41, y: y + 8 },
+      ],
+      0xffefc8,
+      1,
+    );
+    van.fillStyle(0x25272b, 1);
+    van.fillEllipse(x - 40, y + 24, 28, 14);
+    van.fillEllipse(x + 36, y + 24, 28, 14);
+  }
+
+  private addUtilityCart(x: number, y: number, bodyColor: number) {
+    const cart = this.add.graphics();
+    cart.setDepth(y);
+    cart.fillStyle(0x11151c, 0.14);
+    cart.fillEllipse(x - 4, y + 18, 78, 20);
+    this.fillPolygon(
+      cart,
+      [
+        { x: x - 34, y: y },
+        { x: x - 4, y: y - 14 },
+        { x: x + 36, y: y + 6 },
+        { x: x + 6, y: y + 21 },
+      ],
+      bodyColor,
+      1,
+    );
+    cart.fillStyle(0x8d9095, 1);
+    cart.fillRect(x - 2, y - 24, 8, 24);
+    cart.fillRect(x + 16, y - 20, 8, 20);
+    cart.fillStyle(0x25272b, 1);
+    cart.fillEllipse(x - 22, y + 16, 18, 10);
+    cart.fillEllipse(x + 20, y + 16, 18, 10);
+  }
+
+  private addCrateStack(x: number, y: number) {
+    const stack = this.add.graphics();
+    stack.setDepth(y);
+    this.fillPolygon(
+      stack,
+      [
+        { x: x - 30, y: y - 12 },
+        { x: x - 4, y: y - 24 },
+        { x: x + 18, y: y - 12 },
+        { x: x - 8, y: y },
+      ],
+      0xcf9e60,
+      1,
+    );
+    this.fillPolygon(
+      stack,
+      [
+        { x: x - 8, y },
+        { x: x + 18, y: y - 12 },
+        { x: x + 18, y: y + 16 },
+        { x: x - 8, y: y + 28 },
+      ],
+      0xb67f41,
+      1,
+    );
+    this.fillPolygon(
+      stack,
+      [
+        { x: x - 30, y: y - 12 },
+        { x: x - 8, y },
+        { x: x - 8, y: y + 28 },
+        { x: x - 30, y: y + 16 },
+      ],
+      0x946738,
+      1,
+    );
+  }
+
+  private addBin(x: number, y: number) {
+    const bin = this.add.graphics();
+    bin.setDepth(y);
+    this.fillPolygon(
+      bin,
+      [
+        { x: x - 16, y: y - 12 },
+        { x: x + 4, y: y - 22 },
+        { x: x + 18, y: y - 14 },
+        { x: x - 2, y: y - 4 },
+      ],
+      0xd74646,
+      1,
+    );
+    this.fillPolygon(
+      bin,
+      [
+        { x: x - 2, y: y - 4 },
+        { x: x + 18, y: y - 14 },
+        { x: x + 18, y: y + 18 },
+        { x: x - 2, y: y + 28 },
+      ],
+      0xbd3232,
+      1,
+    );
+    this.fillPolygon(
+      bin,
+      [
+        { x: x - 16, y: y - 12 },
+        { x: x - 2, y: y - 4 },
+        { x: x - 2, y: y + 28 },
+        { x: x - 16, y: y + 20 },
+      ],
+      0xa62c2c,
+      1,
+    );
+  }
+
+  private addNpc(avatar: string, x: number, y: number, direction: Direction, color: string) {
+    const shadow = this.add.ellipse(x, y + 3, 22, 8, 0x0b1018, 0.22).setDepth(y - 1);
+    shadow.setOrigin(0.5);
+
+    const sprite = this.add
+      .sprite(x, y, `avatar-sheet-${avatar}`, FRAME_GROUPS[direction].idle[0])
+      .setOrigin(0.5, 1)
+      .setScale(1.25)
+      .setDepth(y);
+    sprite.play(`${avatar}-idle-${direction}`, true);
+    sprite.setTint(hexToColor(color));
   }
 
   private createViewportHud() {
     this.add
-      .text(24, 18, 'PIXEL ROOM // NEON MIDTOWN', {
+      .text(24, 18, 'PIXEL ROOM // ISO CITY BLOCK', {
         fontFamily: 'Consolas, Monaco, monospace',
         fontSize: '18px',
-        color: '#f2f6ff',
+        color: '#f7fbff',
       })
       .setScrollFactor(0)
       .setDepth(2000);
 
     this.add
-      .text(24, 42, 'Byte Cafe / Pulse Club / Sky Mall / Zero-One / Cloud Bar / Data Bazaar', {
+      .text(24, 42, 'Supermarket / Fruit Hall / Market / Taxi Lane / Public Plaza', {
         fontFamily: 'Consolas, Monaco, monospace',
         fontSize: '12px',
-        color: '#a7bbd4',
+        color: '#dbe4ef',
       })
       .setScrollFactor(0)
       .setDepth(2000);
   }
 
-  private strokeBezier(graphics: Phaser.GameObjects.Graphics, curve: Phaser.Curves.CubicBezier) {
-    graphics.strokePoints(curve.getPoints(36));
-  }
-
   private addPlayerSprite(player: PlayerState) {
     const body = this.add.sprite(0, 0, `avatar-sheet-${player.avatar}`, FRAME_GROUPS.down.idle[0]).setOrigin(0.5, 1);
-    body.setScale(1.7);
+    body.setScale(1.35);
 
-    const shadow = this.add.ellipse(0, 2, 28, 10, 0x071018, 0.35).setOrigin(0.5, 0.5);
+    const shadow = this.add.ellipse(0, 2, 24, 8, 0x071018, 0.3).setOrigin(0.5, 0.5);
     const aura = this.add
-      .ellipse(0, -8, 42, 18, Phaser.Display.Color.HexStringToColor(player.color).color, 0.18)
+      .ellipse(0, -7, 34, 14, hexToColor(player.color), 0.16)
       .setOrigin(0.5, 0.5);
     const nameTag = this.add
-      .text(0, -40, player.name, {
+      .text(0, -37, player.name, {
         fontFamily: 'Consolas, Monaco, monospace',
         fontSize: '12px',
         color: '#f8f3df',
@@ -514,7 +808,7 @@ export class PixelScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const bubble = this.add
-      .text(0, -72, '', {
+      .text(0, -70, '', {
         fontFamily: 'Consolas, Monaco, monospace',
         fontSize: '11px',
         color: '#1d2330',

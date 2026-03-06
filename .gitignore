@@ -13,3 +13,7 @@ client/.env.local
 server/node_modules/
 server/.env
 server/.env.local
+
+third_party/source-assets/
+third_party/open-assets/
+third_party/*.html

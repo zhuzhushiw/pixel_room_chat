@@ -6,10 +6,10 @@ const PORT = process.env.PORT || 3001;
 const MAX_MESSAGE_HISTORY = 40;
 const AVATAR_OPTIONS = ['alice', 'grace', 'jack', 'joe', 'lea', 'monica', 'stephen', 'tom'];
 const ROOM_BOUNDS = {
-  minX: 96,
-  maxX: 1952,
-  minY: 128,
-  maxY: 936,
+  minX: 300,
+  maxX: 1760,
+  minY: 410,
+  maxY: 980,
 };
 const CLIENT_URL = process.env.CLIENT_URL || '';
 const allowedOrigins = CLIENT_URL
@@ -29,8 +29,8 @@ function createPlayer({ id, name, color, avatar }) {
     name,
     color,
     avatar,
-    x: ROOM_BOUNDS.minX + Math.floor(Math.random() * (ROOM_BOUNDS.maxX - ROOM_BOUNDS.minX - 40)),
-    y: ROOM_BOUNDS.minY + Math.floor(Math.random() * (ROOM_BOUNDS.maxY - ROOM_BOUNDS.minY - 40)),
+    x: ROOM_BOUNDS.minX + 260 + Math.floor(Math.random() * 520),
+    y: ROOM_BOUNDS.minY + 120 + Math.floor(Math.random() * 180),
     direction: 'down',
     isMoving: false,
   };

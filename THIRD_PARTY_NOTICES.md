@@ -32,3 +32,23 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## OpenGameArt Assets
+
+This repository also includes selected isometric building and roof assets from:
+
+- `400+ Isometric Town Tiles`
+- Source: `https://opengameart.org/content/400-isometric-town-tiles`
+
+Copied files:
+
+- `client/public/assets/open-source/oga-isometric-buildings-1.png`
+- `client/public/assets/open-source/oga-isometric-roofs.png`
+
+License:
+
+CC0 / Public Domain
+
+Author notice on the source package:
+
+`All Screaming Brain Studios assets have been released under the CC0/Public Domain License.`
